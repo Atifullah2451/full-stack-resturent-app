@@ -1,0 +1,6 @@
+{
+  "name": "Savoria - Restaurant Mobile App & Backend MVP",
+  "description": "Production-ready Full-Stack Restaurant Ordering & Table Booking Mobile App (React Native/Expo + Node.js Express REST API + Firebase Auth & Firestore) with live interactive preview, source code exporter, and deployment guides.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
