@@ -1,3 +1,4 @@
+
 name: Build APK
 
 on:
@@ -9,6 +10,7 @@ jobs:
     defaults:
       run:
         working-directory: mobile-app
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,16 +24,28 @@ jobs:
           java-version: 17
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Verify splash resources
+        run: |
+          echo "Checking splashscreen.xml"
+          cat android/app/src/main/res/drawable/splashscreen.xml
+          echo "Checking colors.xml"
+          cat android/app/src/main/res/values/colors.xml
+          echo "Searching for splashscreen_background"
+          grep -R "splashscreen_background" android/app/src/main/res
+
       - name: Build APK
-        run: cd android && chmod +x gradlew && ./gradlew assembleRelease
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ahmed-apk
+          name: savoria-restaurant-apk
           path: mobile-app/android/app/build/outputs/apk/release/app-release.apk
