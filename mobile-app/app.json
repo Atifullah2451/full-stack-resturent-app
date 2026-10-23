@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Savoria Restaurant",
@@ -10,6 +9,7 @@
       "**/*"
     ],
     "splash": {
+      "image": "./assets/splash.png",
       "backgroundColor": "#FFFFFF",
       "resizeMode": "contain"
     },
