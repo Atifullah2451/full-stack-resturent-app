@@ -1,33 +1,51 @@
 
-      - name: Diagnose and fix splash resources
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile-app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Fix splash resources
         shell: bash
         run: |
           set -euxo pipefail
 
-          echo "=== Current directory ==="
-          pwd
-
-          echo "=== Resource files ==="
-          find android/app/src/main/res -type f \( -name "colors.xml" -o -name "splashscreen.xml" \)
-
-          echo "=== colors.xml before fix ==="
-          cat android/app/src/main/res/values/colors.xml
-
-          echo "=== splashscreen.xml ==="
-          cat android/app/src/main/res/drawable/splashscreen.xml
-
-          echo "=== Add missing color ==="
           python3 - <<'PY'
           from pathlib import Path
           import re
 
           colors = Path("android/app/src/main/res/values/colors.xml")
-          colors.parent.mkdir(parents=True, exist_ok=True)
+          splash = Path("android/app/src/main/res/drawable/splashscreen.xml")
 
-          if not colors.exists():
-              colors.write_text("<resources>\n</resources>\n")
-
-          content = colors.read_text()
+          assert splash.exists(), f"Missing file: {splash}"
+          content = colors.read_text() if colors.exists() else "<resources>\n</resources>\n"
 
           if re.search(r'name="splashscreen_background"', content):
               content = re.sub(
@@ -42,12 +60,25 @@
                   '  <color name="splashscreen_background">#FFFFFF</color>\n</resources>'
               )
 
+          colors.parent.mkdir(parents=True, exist_ok=True)
           colors.write_text(content)
-          print(colors.read_text())
 
-          assert re.search(r'<color\s+name="splashscreen_background">\s*#FFFFFF\s*</color>', content), \
-              "Required splash color is missing"
+          print("=== colors.xml ===")
+          print(colors.read_text())
+          print("=== splashscreen.xml ===")
+          print(splash.read_text())
+
+          assert 'name="splashscreen_background"' in colors.read_text()
           PY
 
-          echo "=== Verify all resource references ==="
-          grep -R -n "splashscreen_background" android/app/src/main/res
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: savoria-restaurant-apk
+          path: mobile-app/android/app/build/outputs/apk/release/app-release.apk
