@@ -7,18 +7,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: mobile-app
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
@@ -29,14 +33,23 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Fix splash screen color resource
+        run: |
+          mkdir -p android/app/src/main/res/values
+
+          cat > android/app/src/main/res/values/splashscreen_colors.xml <<'EOF'
+          <resources>
+              <color name="splashscreen_background">#FFFFFF</color>
+          </resources>
+          EOF
+
       - name: Verify splash resources
         run: |
           echo "Checking splashscreen.xml"
           cat android/app/src/main/res/drawable/splashscreen.xml
-          echo "Checking colors.xml"
-          cat android/app/src/main/res/values/colors.xml
-          echo "Searching for splashscreen_background"
-          grep -R "splashscreen_background" android/app/src/main/res
+
+          echo "Checking splash color resources"
+          grep -R "splashscreen_background" android/app/src/main/res/values android/app/src/main/res/drawable
 
       - name: Build APK
         run: |
@@ -49,3 +62,4 @@ jobs:
         with:
           name: savoria-restaurant-apk
           path: mobile-app/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
