@@ -8,11 +8,6 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "splash": {
-      "image": "./assets/splash.png",
-      "backgroundColor": "#FFFFFF",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.savoria.restaurant"
@@ -26,14 +21,7 @@
       ]
     },
     "plugins": [
-      "expo-font",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#FFFFFF",
-          "image": "./assets/splash.png"
-        }
-      ]
+      "expo-font"
     ]
   }
 }
