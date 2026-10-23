@@ -34,6 +34,10 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install --clean
 
+      - name: Fix splash color
+        run: |
+          grep -q splashscreen_background android/app/src/main/res/values/colors.xml || sed -i 's|</resources>|  <color name="splashscreen_background">#FFFFFF</color>\n</resources>|' android/app/src/main/res/values/colors.xml
+
       - name: Build release APK
         run: |
           cd android
