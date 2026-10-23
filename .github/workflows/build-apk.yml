@@ -34,29 +34,26 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Fix splash screen color
+      - name: Diagnose and fix splash resources
         shell: bash
         run: |
+          set -euxo pipefail
+          echo "=== Current directory ==="
+          pwd
           FILE="android/app/src/main/res/values/colors.xml"
-
           mkdir -p "$(dirname "$FILE")"
-
           if [ ! -f "$FILE" ]; then
             echo '<resources></resources>' > "$FILE"
           fi
-
           if grep -q 'name="splashscreen_background"' "$FILE"; then
             sed -i 's|<color name="splashscreen_background">[^<]*</color>|<color name="splashscreen_background">#FFFFFF</color>|' "$FILE"
           else
             sed -i 's|</resources>|  <color name="splashscreen_background">#FFFFFF</color>\n</resources>|' "$FILE"
           fi
-
           echo "----- colors.xml -----"
           cat "$FILE"
-
           echo "----- splashscreen.xml -----"
           cat android/app/src/main/res/drawable/splashscreen.xml
-
           echo "----- Verify required color -----"
           grep -q 'name="splashscreen_background"' "$FILE"
 
