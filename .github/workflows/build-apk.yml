@@ -36,7 +36,12 @@ jobs:
 
       - name: Fix splash color
         run: |
-          grep -q splashscreen_background android/app/src/main/res/values/colors.xml || sed -i 's|</resources>|  <color name="splashscreen_background">#FFFFFF</color>\n</resources>|' android/app/src/main/res/values/colors.xml
+          mkdir -p android/app/src/main/res/values
+          if ! grep -rq 'name="splashscreen_background"' android/app/src/main/res/values; then
+            printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n  <color name="splashscreen_background">#FFFFFF</color>\n</resources>\n' > android/app/src/main/res/values/splash_fix.xml
+          fi
+          echo "--- check ---"
+          grep -r "splashscreen_background" android/app/src/main/res/ || true
 
       - name: Build release APK
         run: |
