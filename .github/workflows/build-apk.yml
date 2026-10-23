@@ -34,6 +34,24 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
+<<<<<<< HEAD
+=======
+      - name: Create colors.xml reliably with Python
+        shell: python3
+        run: |
+          import os
+          path = "android/app/src/main/res/values/colors.xml"
+          os.makedirs(os.path.dirname(path), exist_ok=True)
+          content = '''<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="splashscreen_background">#FFFFFF</color>
+          </resources>
+          '''
+          with open(path, "w") as f:
+              f.write(content)
+          print("Successfully created/updated colors.xml")
+
+>>>>>>> e5873637ec06d82fdea28f14a18c803fb6f5ccea
       - name: Build release APK
         run: |
           cd android
