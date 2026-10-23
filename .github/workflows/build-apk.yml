@@ -20,6 +20,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: mobile-app/package-lock.json
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -35,27 +37,67 @@ jobs:
 
       - name: Fix splash screen color resource
         run: |
-          mkdir -p android/app/src/main/res/values
+          python3 <<'PY'
+          from pathlib import Path
+          import re
 
-          cat > android/app/src/main/res/values/splashscreen_colors.xml <<'EOF'
-          <resources>
-              <color name="splashscreen_background">#FFFFFF</color>
-          </resources>
-          EOF
+          resource_dir = Path("android/app/src/main/res/values")
+          resource_dir.mkdir(parents=True, exist_ok=True)
+          colors_file = resource_dir / "colors.xml"
+
+          if colors_file.exists():
+              content = colors_file.read_text()
+          else:
+              content = "<resources>\n</resources>\n"
+
+          color = '<color name="splashscreen_background">#FFFFFF</color>'
+
+          if re.search(
+              r'<color\s+name=["\']splashscreen_background["\']',
+              content
+          ):
+              content = re.sub(
+                  r'<color\s+name=["\']splashscreen_background["\'][^>]*>.*?</color>',
+                  color,
+                  content,
+                  flags=re.DOTALL
+              )
+          else:
+              content = content.replace(
+                  "</resources>",
+                  f"    {color}\n</resources>"
+              )
+
+          colors_file.write_text(content)
+
+          splash_file = Path(
+              "android/app/src/main/res/drawable/splashscreen.xml"
+          )
+
+          if not splash_file.exists():
+              raise SystemExit(
+                  f"Missing splash file: {splash_file}"
+              )
+
+          print("Updated colors.xml:")
+          print(colors_file.read_text())
+          print("Splash screen XML:")
+          print(splash_file.read_text())
+          PY
 
       - name: Verify splash resources
         run: |
-          echo "Checking splashscreen.xml"
-          cat android/app/src/main/res/drawable/splashscreen.xml
+          grep -n "splashscreen_background" \
+            android/app/src/main/res/values/colors.xml
 
-          echo "Checking splash color resources"
-          grep -R "splashscreen_background" android/app/src/main/res/values android/app/src/main/res/drawable
+          grep -n "splashscreen_background" \
+            android/app/src/main/res/drawable/splashscreen.xml
 
-      - name: Build APK
+      - name: Build release APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew --no-daemon assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -63,3 +105,4 @@ jobs:
           name: savoria-restaurant-apk
           path: mobile-app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+          retention-days: 7
