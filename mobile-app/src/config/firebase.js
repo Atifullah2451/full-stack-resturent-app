@@ -10,7 +10,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   initializeAuth,
   getReactNativePersistence,
-  getAuth
+  getAuth,
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { isSupported, getAnalytics } from 'firebase/analytics';
@@ -30,16 +30,13 @@ export const firebaseConfig = {
 // Initialize Firebase App instance
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Auth with AsyncStorage persistence to ensure sessions survive app restarts
-let auth;
-try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
-} catch (error) {
-  // If already initialized (e.g. Fast Refresh during local development)
-  auth = getAuth(app);
-}
+// Initialize exactly one auth instance, using platform-appropriate persistence.
+const auth =
+  Platform.OS === 'web'
+    ? getAuth(app)
+    : initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
 
 // Initialize Cloud Firestore
 const db = getFirestore(app);

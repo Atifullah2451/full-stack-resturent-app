@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, SPACING, SHADOWS, colors, fontSizes, fonts, spacing } from '../../theme/theme';
@@ -18,6 +19,7 @@ import { getApiBaseUrl, setApiBaseUrl } from '../../config/api';
 
 export const ProfileScreen = ({ navigation }) => {
   const { user, profile, logout, updateProfileData } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Edit Profile Modal
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -66,11 +68,38 @@ export const ProfileScreen = ({ navigation }) => {
     Alert.alert('API Host Updated', `Backend API URL set to: ${serverUrl || 'Default'}`);
   };
 
-  const handleLogout = () => {
-    Alert.alert('Confirm Sign Out', 'Are you sure you want to log out of Savoria?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: logout },
-    ]);
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+
+    try {
+      const confirmed =
+        Platform.OS === 'web'
+          ? window.confirm('Are you sure you want to log out of Savoria?')
+          : await new Promise((resolve) => {
+              Alert.alert(
+                'Confirm Sign Out',
+                'Are you sure you want to log out of Savoria?',
+                [
+                  { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                  { text: 'Log Out', style: 'destructive', onPress: () => resolve(true) },
+                ],
+                { cancelable: true, onDismiss: () => resolve(false) }
+              );
+            });
+
+      if (!confirmed) return;
+      await logout();
+    } catch (error) {
+      const message = error?.message || 'Unable to sign out right now. Please try again.';
+      if (Platform.OS === 'web') {
+        window.alert(`Logout Failed: ${message}`);
+      } else {
+        Alert.alert('Logout Failed', message);
+      }
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   if (!user) {
@@ -163,6 +192,7 @@ export const ProfileScreen = ({ navigation }) => {
           title="Log Out"
           variant="outline"
           onPress={handleLogout}
+          loading={isLoggingOut}
           style={styles.logoutBtn}
           textStyle={{ color: COLORS.error }}
         />

@@ -15,6 +15,7 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../config/firebase';
+import { CART_STORAGE_KEY, USER_PROFILE_CACHE_KEY } from '../config/storageKeys';
 
 const AuthContext = createContext();
 
@@ -29,7 +30,11 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        await fetchUserProfile(currentUser.uid, currentUser.email);
+        await fetchUserProfile(
+          currentUser.uid,
+          currentUser.email,
+          currentUser.displayName
+        );
       } else {
         setUser(null);
         setProfile(null);
@@ -41,35 +46,33 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Fetch or cache user profile from Firestore "users"
-  const fetchUserProfile = async (uid, email) => {
+  const fetchUserProfile = async (uid, email, displayName) => {
     try {
       const userDocRef = doc(db, 'users', uid);
       const userSnapshot = await getDoc(userDocRef);
 
+      if (auth.currentUser?.uid !== uid) return;
+
       if (userSnapshot.exists()) {
         const userData = userSnapshot.data();
         setProfile(userData);
-        await AsyncStorage.setItem('@savoria_cached_profile', JSON.stringify(userData));
+        await AsyncStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(userData));
       } else {
         // Create initial skeleton if not present
         const initialData = {
           uid,
           email: email || '',
-          name: auth.currentUser?.displayName || 'Guest User',
+          name: displayName || 'Guest User',
           phone: '',
           address: '',
           createdAt: new Date().toISOString()
         };
         await setDoc(userDocRef, initialData, { merge: true });
+        if (auth.currentUser?.uid !== uid) return;
         setProfile(initialData);
       }
     } catch (err) {
       console.warn('Error fetching Firestore user profile:', err.message);
-      // Fallback to locally cached profile
-      const cached = await AsyncStorage.getItem('@savoria_cached_profile');
-      if (cached) {
-        setProfile(JSON.parse(cached));
-      }
     }
   };
 
@@ -117,7 +120,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
       setUser(userCredential.user);
-      await fetchUserProfile(userCredential.user.uid, userCredential.user.email);
+      await fetchUserProfile(
+        userCredential.user.uid,
+        userCredential.user.email,
+        userCredential.user.displayName
+      );
       return { success: true };
     } catch (error) {
       let message = 'Login failed. Check your credentials.';
@@ -133,14 +140,10 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = async () => {
-    try {
-      await signOut(auth);
-      await AsyncStorage.removeItem('@savoria_cached_profile');
-      setUser(null);
-      setProfile(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await signOut(auth);
+    setUser(null);
+    setProfile(null);
+    await AsyncStorage.multiRemove([USER_PROFILE_CACHE_KEY, CART_STORAGE_KEY]);
   };
 
   // Forgot password
@@ -169,7 +172,7 @@ export const AuthProvider = ({ children }) => {
       };
       await setDoc(userRef, newProfile, { merge: true });
       setProfile(newProfile);
-      await AsyncStorage.setItem('@savoria_cached_profile', JSON.stringify(newProfile));
+      await AsyncStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(newProfile));
       return { success: true };
     } catch (error) {
       throw error;

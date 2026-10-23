@@ -3,13 +3,13 @@
  * Manages cart items, item quantity modifications, totals calculation,
  * local persistence using AsyncStorage, and placing orders to Firestore/Backend.
  */
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from './AuthContext';
+import { CART_STORAGE_KEY } from '../config/storageKeys';
 
-const CART_STORAGE_KEY = '@savoria_cart_items_v1';
 const TAX_RATE = 0.0825; // 8.25% sales tax
 
 const CartContext = createContext();
@@ -18,13 +18,15 @@ export const CartProvider = ({ children }) => {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const previousUserId = useRef(user?.uid || null);
+  const signedOutRef = useRef(false);
 
   // Load cart from AsyncStorage on initial launch
   useEffect(() => {
     const loadCart = async () => {
       try {
         const stored = await AsyncStorage.getItem(CART_STORAGE_KEY);
-        if (stored) {
+        if (stored && !signedOutRef.current) {
           setItems(JSON.parse(stored));
         }
       } catch (e) {
@@ -35,6 +37,17 @@ export const CartProvider = ({ children }) => {
     };
     loadCart();
   }, []);
+
+  useEffect(() => {
+    if (previousUserId.current && !user) {
+      signedOutRef.current = true;
+      setItems([]);
+      AsyncStorage.removeItem(CART_STORAGE_KEY).catch((err) =>
+        console.warn('Failed to clear cart after sign out:', err)
+      );
+    }
+    previousUserId.current = user?.uid || null;
+  }, [user]);
 
   // Sync to AsyncStorage on every change
   useEffect(() => {

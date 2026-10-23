@@ -135,58 +135,47 @@ function MainTabNavigator() {
   );
 }
 
+const stackScreenOptions = {
+  headerStyle: { backgroundColor: colors.surface },
+  headerTintColor: colors.text,
+  headerTitleStyle: { fontFamily: fonts.serif, fontSize: fontSizes.bodyLarge },
+};
+
+const AuthStack = () => (
+  <Stack.Navigator screenOptions={stackScreenOptions}>
+    <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign In' }} />
+    <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
+    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
+  </Stack.Navigator>
+);
+
+const AppStack = () => (
+  <Stack.Navigator screenOptions={stackScreenOptions}>
+    <Stack.Screen
+      name="MainTabs"
+      component={MainTabNavigator}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="ItemDetail"
+      component={ItemDetailScreen}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="OrderHistory"
+      component={OrderHistoryScreen}
+      options={{ title: 'My Order History' }}
+    />
+  </Stack.Navigator>
+);
+
 // Root Application Navigator
 export const AppNavigator = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user } = useAuth();
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.surface },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontFamily: fonts.serif, fontSize: fontSizes.bodyLarge },
-        }}
-      >
-        {/* Main Tab App is always accessible, guest browsing allowed */}
-        <Stack.Screen
-          name="MainTabs"
-          component={MainTabNavigator}
-          options={{ headerShown: false }}
-        />
-
-        {/* Modal / Push Screens */}
-        <Stack.Screen
-          name="ItemDetail"
-          component={ItemDetailScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Stack.Screen
-          name="OrderHistory"
-          component={OrderHistoryScreen}
-          options={{ title: 'My Order History' }}
-        />
-
-        {/* Auth Screens */}
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ title: 'Sign In' }}
-        />
-
-        <Stack.Screen
-          name="Register"
-          component={RegisterScreen}
-          options={{ title: 'Create Account' }}
-        />
-
-        <Stack.Screen
-          name="ForgotPassword"
-          component={ForgotPasswordScreen}
-          options={{ title: 'Reset Password' }}
-        />
-      </Stack.Navigator>
+    <NavigationContainer key={user ? 'authenticated' : 'unauthenticated'}>
+      {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
 };
