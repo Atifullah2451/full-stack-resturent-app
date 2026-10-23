@@ -32,7 +32,7 @@ jobs:
         run: npm ci
 
       - name: Generate Android project
-        run: npx expo prebuild --platform android --no-install
+        run: npx expo prebuild --platform android --no-install --clean
 
       - name: Build release APK
         run: |
