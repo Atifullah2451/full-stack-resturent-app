@@ -35,74 +35,42 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Fix splash screen color resource
+      - name: Fix splash screen color
+        shell: bash
         run: |
-          python3 <<'PY'
-          from pathlib import Path
-          import re
+          FILE="android/app/src/main/res/values/colors.xml"
 
-          resource_dir = Path("android/app/src/main/res/values")
-          resource_dir.mkdir(parents=True, exist_ok=True)
-          colors_file = resource_dir / "colors.xml"
+          mkdir -p "$(dirname "$FILE")"
 
-          if colors_file.exists():
-              content = colors_file.read_text()
-          else:
-              content = "<resources>\n</resources>\n"
+          if [ ! -f "$FILE" ]; then
+            echo '<resources></resources>' > "$FILE"
+          fi
 
-          color = '<color name="splashscreen_background">#FFFFFF</color>'
+          if grep -q 'name="splashscreen_background"' "$FILE"; then
+            sed -i 's|<color name="splashscreen_background">[^<]*</color>|<color name="splashscreen_background">#FFFFFF</color>|' "$FILE"
+          else
+            sed -i 's|</resources>|  <color name="splashscreen_background">#FFFFFF</color>\n</resources>|' "$FILE"
+          fi
 
-          if re.search(
-              r'<color\s+name=["\']splashscreen_background["\']',
-              content
-          ):
-              content = re.sub(
-                  r'<color\s+name=["\']splashscreen_background["\'][^>]*>.*?</color>',
-                  color,
-                  content,
-                  flags=re.DOTALL
-              )
-          else:
-              content = content.replace(
-                  "</resources>",
-                  f"    {color}\n</resources>"
-              )
+          echo "----- colors.xml -----"
+          cat "$FILE"
 
-          colors_file.write_text(content)
+          echo "----- splashscreen.xml -----"
+          cat android/app/src/main/res/drawable/splashscreen.xml
 
-          splash_file = Path(
-              "android/app/src/main/res/drawable/splashscreen.xml"
-          )
-
-          if not splash_file.exists():
-              raise SystemExit(
-                  f"Missing splash file: {splash_file}"
-              )
-
-          print("Updated colors.xml:")
-          print(colors_file.read_text())
-          print("Splash screen XML:")
-          print(splash_file.read_text())
-          PY
-
-      - name: Verify splash resources
-        run: |
-          grep -n "splashscreen_background" \
-            android/app/src/main/res/values/colors.xml
-
-          grep -n "splashscreen_background" \
-            android/app/src/main/res/drawable/splashscreen.xml
+          echo "----- Verify required color -----"
+          grep -q 'name="splashscreen_background"' "$FILE"
 
       - name: Build release APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
+          ./gradlew assembleRelease
 
-      - name: Upload APK
+      - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: savoria-restaurant-apk
           path: mobile-app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
-          retention-days: 7
