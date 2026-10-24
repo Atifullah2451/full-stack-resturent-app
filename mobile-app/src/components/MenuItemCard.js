@@ -99,23 +99,23 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadows.card,
     flexDirection: 'row',
-    minHeight: 132,
+    height: 250,
   },
   pressed: {
     opacity: 0.9,
     transform: [{ scale: 0.985 }],
   },
   imageContainer: {
-    width: 120,
-    minHeight: 132,
+    width: 180,
+    height: 250,
     backgroundColor: colors.subtle,
     position: 'relative',
     borderRadius: radii.md,
     overflow: 'hidden',
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: 180,
+    height: 250,
   },
   rating: {
     flexDirection: 'row',
