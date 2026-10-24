@@ -73,6 +73,6 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: savoria-restaurant-apk
+          name: savoria-restaurant-apk-${{ github.sha }}
           path: mobile-app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
