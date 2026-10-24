@@ -34,21 +34,34 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install --clean
 
-      - name: Show splash files
+      - name: DIAGNOSE splash resources
         run: |
+          echo "=== latest commit ==="
+          git log -1 --oneline
+          echo "=== app.json splash config ==="
+          node -e "console.log(JSON.stringify(require('./app.json').expo.splash ?? null, null, 2))"
+          echo "=== assets ==="
+          ls -la assets
+          echo "=== Android resource folders ==="
+          find android/app/src/main/res -maxdepth 2 -type d | sort
           echo "=== splashscreen.xml ==="
           cat android/app/src/main/res/drawable/splashscreen.xml
-          echo "=== colors.xml ==="
-          cat android/app/src/main/res/values/colors.xml
+          echo "=== all colors.xml files ==="
+          find android/app/src/main/res -type f -name colors.xml -print -exec cat {} \;
+          echo "=== splashscreen_background references and definitions ==="
+          grep -RIn "splashscreen_background" android/app/src/main/res || true
 
       - name: Ensure splash color exists
         run: |
-          if ! grep -rq '<color name="splashscreen_background"' android/app/src/main/res/values; then
+          resource_dir="android/app/src/main/res"
+          if ! grep -Rqs '<color[^>]*name="splashscreen_background"' "$resource_dir"/values*; then
+            mkdir -p "$resource_dir/values"
             printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n  <color name="splashscreen_background">#FFFFFF</color>\n</resources>\n' > android/app/src/main/res/values/splash_fix.xml
             echo "added fallback color"
           else
             echo "color already defined"
           fi
+          grep -RIn '<color[^>]*name="splashscreen_background"' "$resource_dir"/values*
 
       - name: Build release APK
         run: |
